@@ -27,7 +27,7 @@ class StoreUserRequest extends FormRequest
              'email' => 'required|email:rfc,dns|unique:users,email',
              'phone' => 'required|unique:users,phone|regex:/^\+380\d+$/',
              'position_id' => 'required|exists:positions,id',
-             'photo' => 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120|dimensions:min_width=70,min_height=70',
+             'photo' => 'required|image|mimes:jpg,jpeg,png,webp|max:5120|dimensions:min_width=70,min_height=70',
          ];
      }
  

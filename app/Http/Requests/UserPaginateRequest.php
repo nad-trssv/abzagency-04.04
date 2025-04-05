@@ -25,7 +25,7 @@ class UserPaginateRequest extends FormRequest
     {
         return [
             'page' => 'nullable|integer|min:1',
-            'count' => 'nullable|integer',
+            'count' => 'nullable|integer|min:1',
         ];
     }
     
@@ -34,18 +34,9 @@ class UserPaginateRequest extends FormRequest
         return [
             'page.integer' => 'The page must be an integer.',
             'page.min' => 'The page must be at least 1.',
+            'count.min' => 'The count must be at least 1.',
             'count.integer' => 'The count must be an integer.',
         ];
     }
 
-    protected function failedValidation(Validator $validator)
-    {
-        $errors = $validator->errors()->getMessages();
-
-        throw new ValidationException($validator, response()->json([
-            'success' => false,
-            'message' => 'Validation failed',
-            'fails' => $errors,
-        ], 422));
-    }
 }

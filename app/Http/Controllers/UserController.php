@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UserPaginateRequest;
+use App\Services\ImageOptimizationService;
 use App\Services\PositionService;
 use App\Services\UserService;
 use Exception;
@@ -20,10 +22,12 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(UserPaginateRequest $request)
     {
         try {
-            $data = $this->userService->listPaginated();
+            $page = $request->input('page', 1);
+            $perPage = $request->input('count', 6);
+            $data = $this->userService->listPaginated($page, $perPage);
 
             return view('users.index', [
                 'success' => true,
@@ -38,10 +42,8 @@ class UserController extends Controller
                 'users' => $data,
             ]);
         } catch(Exception $exception) {
-            return response()->json([
-                'success' => false,
-                'message' => $exception->getMessage(),
-            ], $exception->getCode() ?: 500);
+            return back()->withErrors(['error' => $exception->getMessage()])
+                     ->withInput();
         }
     }
 
@@ -56,22 +58,34 @@ class UserController extends Controller
                 'positions' => $data,
             ]);
         } catch(Exception $exception) {
-            return 'error';
+            return back()->with('error', $exception->getMessage())
+                        ->withInput();
         }
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreUserRequest $request)
+    public function store(StoreUserRequest $request, ImageOptimizationService $imageOptimizationService)
     {
         try {
             $data = $request->all();
+
+            if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
+                $image = $request->file('photo');
+
+                $path = $image->store('uploads/originals', 'public');
+                $fullPath = storage_path('app/public/' . $path);
+
+                $imagePath = $imageOptimizationService->optimizeImage($path, $fullPath);
+
+                $data['photo'] = $imagePath;
+            }
+
             $this->userService->store($data);
             return redirect()->route('users.index')->with('success', 'User added successful!');
         } catch (Exception $exception) {
-
-            return redirect()->back()->with('error', 'Failed to create the user: ' . $exception->getMessage())->withInput();
+            return back()->with('error', 'Failed to create the user: ' . $exception->getMessage())->withInput();
         }
     }
 
@@ -88,7 +102,7 @@ class UserController extends Controller
                 'user' => $user,
             ]);
         } catch (Exception $exception) {
-            return redirect()->route('users.index')->with('success', 'User not found!');
+            return redirect()->route('users.index')->with('error', 'User not found!');
         }
     }
 

@@ -8,6 +8,7 @@ use App\Http\Requests\UserPaginateRequest;
 use App\Http\Requests\UserShowRequest;
 use App\Http\Resources\UserResource;
 use App\Http\Resources\UserShowResource;
+use App\Services\ImageOptimizationService;
 use App\Services\UserService;
 use Exception;
 
@@ -48,10 +49,22 @@ class UserController extends Controller
         }
     }
 
-    public function store(StoreUserRequest $request)
+    public function store(StoreUserRequest $request, ImageOptimizationService $imageOptimizationService)
     {
         try {
             $data = $request->all();
+
+            if ($request->hasFile('photo') && $request->file('photo')->isValid()) {
+                $image = $request->file('photo');
+
+                $path = $image->store('uploads/originals', 'public');
+                $fullPath = storage_path('app/public/' . $path);
+
+                $imagePath = $imageOptimizationService->optimizeImage($path, $fullPath);
+
+                $data['photo'] = $imagePath;
+            }
+
             $user = $this->userService->store($data);
             
             return response()->json([
